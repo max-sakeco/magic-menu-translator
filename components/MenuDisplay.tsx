@@ -13,9 +13,10 @@ interface MenuItem {
 
 interface MenuDisplayProps {
   items: MenuItem[];
+  photos?: string[];
 }
 
-export default function MenuDisplay({ items }: MenuDisplayProps) {
+export default function MenuDisplay({ items, photos = [] }: MenuDisplayProps) {
   const [viewMode, setViewMode] = useState<'traditional' | 'ingredient'>('traditional')
 
   return (
@@ -29,6 +30,20 @@ export default function MenuDisplay({ items }: MenuDisplayProps) {
           <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Menu Display</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {photos.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              {photos.map((photo, index) => (
+                <div key={index} className="relative aspect-[4/3] rounded-lg overflow-hidden">
+                  <img
+                    src={photo}
+                    alt={`Menu photo ${index + 1}`}
+                    className="object-cover w-full h-full hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          
           <div className="flex items-center space-x-2">
             <Switch
               id="view-mode"

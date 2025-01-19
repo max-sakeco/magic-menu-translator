@@ -26,13 +26,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400 })
     }
 
-    console.log('2. Image received:', image.name, 'Size:', image.size)
+    console.log('2. Image received:', image.name, 'Size:', image.size, 'Type:', image.type)
+
+    // Validate image format
+    if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(image.type)) {
+      return NextResponse.json(
+        { error: 'Unsupported image format. Please provide JPEG, PNG, GIF, or WebP image.' },
+        { status: 400 }
+      )
+    }
 
     try {
       console.log('3. Converting image to base64')
       const bytes = await image.arrayBuffer()
       const buffer = Buffer.from(bytes)
       const base64Image = buffer.toString('base64')
+      const mimeType = image.type || 'image/jpeg' // Fallback to JPEG if no type
 
       console.log('4. Making OpenAI API request')
       const response = await openai.chat.completions.create({
@@ -41,18 +50,15 @@ export async function POST(request: Request) {
           {
             role: "user",
             content: [
-              {
-                type: "text",
-                text: "Analyze this Japanese menu image and return ONLY a JSON object in this exact format, with no additional text or markdown: { \"items\": [ { \"japanese\": \"item in japanese\", \"english\": \"translation\" } ] }"
-              },
+              { type: "text", text: "Analyze this Japanese menu image and return ONLY a JSON object in this exact format, with no additional text or markdown: { \"items\": [ { \"japanese\": \"item in japanese\", \"english\": \"translation\" } ] }" },
               {
                 type: "image_url",
                 image_url: {
-                  url: `data:image/jpeg;base64,${base64Image}`
+                  url: `data:${mimeType};base64,${base64Image}`
                 }
               }
-            ],
-          },
+            ]
+          }
         ],
         max_tokens: 1000,
         response_format: { type: "json_object" }

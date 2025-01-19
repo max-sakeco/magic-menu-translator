@@ -1,0 +1,69 @@
+Japanese Menu Assistant - Product Requirements Document (PRD)
+Product Overview
+A web-based application that helps users understand Japanese restaurant menus by translating and organizing dishes with dietary and nutritional information. The app focuses on helping vegetarian/vegan users navigate Japanese menus confidently.
+
+Core Features
+1. Menu Input
+Google Maps Integration
+Allow users to paste Google Maps restaurant URLs to fetch available menu images
+Direct photo upload functionality for menu images taken at restaurants
+Support for multiple image uploads per restaurant
+2. Menu Processing & Translation
+Text Recognition & Translation
+
+Extract Japanese text from menu images
+Translate menu items into English
+Maintain original menu categorization (appetizers, mains, etc.)
+Dish Classification
+
+Categorize dishes by main ingredient type:
+Meat-based
+Fish/Seafood-based
+Vegetarian
+Vegan
+Identify cooking methods:
+Fried
+Stir-fried
+Boiled
+Grilled
+Raw/Fresh
+Others
+3. Menu Display
+Dual View Options
+Traditional menu categories (appetizers, mains, etc.)
+Ingredient-based categories (meat, fish, vegetarian, vegan)
+Toggle switch to alternate between views
+4. Dish Information
+Nutritional Indicators
+
+Protein content (High/Medium/Low)
+Carbohydrate content (High/Medium/Low)
+Salt content (High/Medium/Low)
+Sugar content (High/Medium/Low)
+Dietary Information
+
+Clear vegetarian/vegan indicators
+Cooking method indicators
+Dish photos (when available through Google Maps or user uploads)
+5. Personalization
+Favorites System
+Save dishes to "Had & Liked" collection
+Associate saved dishes with specific restaurants
+Easy access to favorite dishes history
+Technical Requirements
+Web-based application with responsive design
+Online-only functionality (no offline support required)
+Secure user authentication for saving preferences
+Integration with Google Maps API
+Image processing and OCR capabilities for Japanese text
+Translation API integration
+Database for storing user preferences and saved dishes
+User Flow
+User accesses web application
+User either:
+Pastes Google Maps restaurant URL
+Uploads menu photo directly
+System processes images and displays translated menu
+User can toggle between category views
+User can save favorite dishes to their collection
+User can view nutritional and dietary indicators for each dish

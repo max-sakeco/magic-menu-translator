@@ -13,19 +13,26 @@ interface MenuItem {
 
 interface MenuData {
   items: MenuItem[]
+  photos?: string[]
+  restaurantName?: string
 }
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('menu')
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [menuPhotos, setMenuPhotos] = useState<string[]>([])
   
   const handleMenuAnalyzed = (data: MenuData) => {
     try {
       console.log('Received data:', data)
       setMenuItems(data.items || [])
+      if (data.photos) {
+        setMenuPhotos(data.photos)
+      }
     } catch (err) {
       console.error('Failed to process menu items:', err)
       setMenuItems([])
+      setMenuPhotos([])
     }
   }
 
@@ -42,7 +49,7 @@ export default function Home() {
           </TabsList>
           <TabsContent value="menu" className="space-y-8">
             <MenuInput onMenuAnalyzed={handleMenuAnalyzed} />
-            <MenuDisplay items={menuItems} />
+            <MenuDisplay items={menuItems} photos={menuPhotos} />
           </TabsContent>
           <TabsContent value="restaurants">
             <RestaurantsTab />

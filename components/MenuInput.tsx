@@ -14,6 +14,8 @@ interface MenuItem {
 
 interface MenuData {
   items: MenuItem[];
+  photos: string[];
+  restaurantName: string;
 }
 
 interface MenuInputProps {
@@ -26,6 +28,8 @@ export default function MenuInput({ onMenuAnalyzed }: MenuInputProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [url, setUrl] = useState('')
+  const [isLoadingPhotos, setIsLoadingPhotos] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value)
@@ -42,30 +46,108 @@ export default function MenuInput({ onMenuAnalyzed }: MenuInputProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file) {
-      return
-    }
-
     setIsLoading(true)
     setError(null)
 
-    const formData = new FormData()
-    formData.append('image', file)
-
     try {
-      const response = await fetch('/api/analyze-menu', {
-        method: 'POST',
-        body: formData,
-      })
+      if (file) {
+        // Handle file upload
+        const formData = new FormData()
+        formData.append('image', file)
 
-      const data = await response.json()
-      console.log('API Response:', data) // Add debug log
+        const response = await fetch('/api/analyze-menu', {
+          method: 'POST',
+          body: formData,
+        })
 
-      if (!response.ok) {
-        throw new Error(data.details || data.error || 'Failed to analyze menu')
+        const data = await response.json()
+        console.log('API Response:', data)
+
+        if (!response.ok) {
+          throw new Error(data.details || data.error || 'Failed to analyze menu')
+        }
+
+        onMenuAnalyzed({
+          items: data.items || [],
+          photos: [URL.createObjectURL(file)],
+          restaurantName: ''
+        })
+      } else if (url.trim()) {
+        // Handle Google Maps URL
+        const response = await fetch(`/api/fetch-menu-photos?url=${encodeURIComponent(url)}`)
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to fetch menu photos')
+        }
+        
+        const data = await response.json()
+        console.log('Received photos data:', data)
+
+        if (!data.photos || data.photos.length === 0) {
+          throw new Error('No menu photos found for this restaurant')
+        }
+
+        // Process each photo through the menu analyzer
+        const menuResults = await Promise.all(
+          data.photos.map(async (photoUrl: string) => {
+            try {
+              // Fetch the image
+              const imageResponse = await fetch(photoUrl)
+              const blob = await imageResponse.blob()
+
+              // Convert to proper image format
+              const img = new Image()
+              img.src = URL.createObjectURL(blob)
+              await new Promise((resolve) => (img.onload = resolve))
+
+              const canvas = document.createElement('canvas')
+              canvas.width = img.width
+              canvas.height = img.height
+              const ctx = canvas.getContext('2d')
+              ctx?.drawImage(img, 0, 0)
+
+              // Convert to JPEG format
+              const jpegBlob = await new Promise<Blob>((resolve) => {
+                canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.95)
+              })
+
+              const file = new File([jpegBlob], 'menu.jpg', { type: 'image/jpeg' })
+              const formData = new FormData()
+              formData.append('image', file)
+
+              const analysisResponse = await fetch('/api/analyze-menu', {
+                method: 'POST',
+                body: formData,
+              })
+
+              if (!analysisResponse.ok) {
+                throw new Error('Failed to analyze menu photo')
+              }
+
+              return await analysisResponse.json()
+            } catch (err) {
+              console.error('Error processing photo:', err)
+              return { items: [] }
+            }
+          })
+        )
+
+        // Combine all menu items from different photos
+        const combinedMenuItems = menuResults.reduce((acc, result) => {
+          if (result.items && Array.isArray(result.items)) {
+            return [...acc, ...result.items]
+          }
+          return acc
+        }, [])
+
+        onMenuAnalyzed({
+          items: combinedMenuItems,
+          photos: data.photos,
+          restaurantName: data.restaurantName
+        })
+      } else {
+        throw new Error('Please either upload a photo or enter a Google Maps URL')
       }
-
-      onMenuAnalyzed(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       console.error('Error details:', err)
@@ -84,6 +166,95 @@ export default function MenuInput({ onMenuAnalyzed }: MenuInputProps) {
     if (files && files.length > 0) {
       setFile(files[0])
       setInput(files[0].name)
+    }
+  }
+
+  const handleUrlSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoadingPhotos(true)
+    setError(null)
+
+    try {
+      if (!url.trim()) {
+        throw new Error('Please enter a Google Maps URL')
+      }
+
+      const response = await fetch(`/api/fetch-menu-photos?url=${encodeURIComponent(url)}`)
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fetch menu photos')
+      }
+      
+      const data = await response.json()
+      console.log('Received photos data:', data) // Debug log
+
+      if (!data.photos || data.photos.length === 0) {
+        throw new Error('No menu photos found for this restaurant')
+      }
+
+      // Process each photo through the menu analyzer
+      const menuResults = await Promise.all(
+        data.photos.map(async (photoUrl: string) => {
+          try {
+            // Fetch the image
+            const imageResponse = await fetch(photoUrl)
+            const blob = await imageResponse.blob()
+
+            // Convert to proper image format
+            const img = new Image()
+            img.src = URL.createObjectURL(blob)
+            await new Promise((resolve) => (img.onload = resolve))
+
+            const canvas = document.createElement('canvas')
+            canvas.width = img.width
+            canvas.height = img.height
+            const ctx = canvas.getContext('2d')
+            ctx?.drawImage(img, 0, 0)
+
+            // Convert to JPEG format
+            const jpegBlob = await new Promise<Blob>((resolve) => {
+              canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.95)
+            })
+
+            const file = new File([jpegBlob], 'menu.jpg', { type: 'image/jpeg' })
+            const formData = new FormData()
+            formData.append('image', file)
+
+            const analysisResponse = await fetch('/api/analyze-menu', {
+              method: 'POST',
+              body: formData,
+            })
+
+            if (!analysisResponse.ok) {
+              throw new Error('Failed to analyze menu photo')
+            }
+
+            return await analysisResponse.json()
+          } catch (err) {
+            console.error('Error processing photo:', err)
+            return { items: [] } // Return empty items for failed photos
+          }
+        })
+      )
+
+      // Combine all menu items from different photos
+      const combinedMenuItems = menuResults.reduce((acc, result) => {
+        if (result.items && Array.isArray(result.items)) {
+          return [...acc, ...result.items]
+        }
+        return acc
+      }, [])
+
+      // Pass both menu items and photos to parent
+      onMenuAnalyzed({ 
+        items: combinedMenuItems,
+        photos: data.photos, // Include the photos from the API response
+        restaurantName: data.restaurantName
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch menu photos')
+    } finally {
+      setIsLoadingPhotos(false)
     }
   }
 
@@ -107,8 +278,8 @@ export default function MenuInput({ onMenuAnalyzed }: MenuInputProps) {
               <Input
                 type="text"
                 placeholder="Paste Google Maps URL or click icon to upload menu photo"
-                value={input}
-                onChange={handleInputChange}
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
                 className="w-full pr-20"
               />
               <input
@@ -132,7 +303,7 @@ export default function MenuInput({ onMenuAnalyzed }: MenuInputProps) {
               type="submit" 
               size="sm" 
               className="mt-2"
-              disabled={isLoading || (!file && !input.trim())}
+              disabled={isLoading || (!url.trim() && !file)}
             >
               {isLoading ? 'Processing...' : 'Create my Magic Menu'}
             </Button>
