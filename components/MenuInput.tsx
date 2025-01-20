@@ -8,6 +8,15 @@ import { Upload, CheckCircle, Loader2 } from 'lucide-react'
 interface MenuItem {
   japanese: string;
   english: string;
+  category: 'meat' | 'fish' | 'vegetarian' | 'vegan';
+  cookingMethod: 'fried' | 'stir-fried' | 'boiled' | 'grilled' | 'raw' | 'other';
+  price?: number;
+  nutrition: {
+    protein: 'high' | 'medium' | 'low';
+    carbs: 'high' | 'medium' | 'low';
+    salt: 'high' | 'medium' | 'low';
+    sugar: 'high' | 'medium' | 'low';
+  };
 }
 
 interface MenuData {
