@@ -1,14 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import MenuInput from '@/components/MenuInput'
 import MenuDisplay from '@/components/MenuDisplay'
 import RestaurantsTab from '@/components/RestaurantsTab'
 
 interface MenuItem {
-  japanese: string
-  english: string
+  japanese: string;
+  english: string;
+  category: 'meat' | 'fish' | 'vegetarian' | 'vegan';
+  cookingMethod: 'fried' | 'stir-fried' | 'boiled' | 'grilled' | 'raw' | 'other';
+  price?: number;
+  nutrition: {
+    protein: 'high' | 'medium' | 'low';
+    carbs: 'high' | 'medium' | 'low';
+    salt: 'high' | 'medium' | 'low';
+    sugar: 'high' | 'medium' | 'low';
+  };
 }
 
 interface MenuData {
@@ -22,19 +31,14 @@ export default function Home() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [menuPhotos, setMenuPhotos] = useState<string[]>([])
   
-  const handleMenuAnalyzed = (data: MenuData) => {
-    try {
-      console.log('Received data:', data)
-      setMenuItems(data.items || [])
-      if (data.photos) {
-        setMenuPhotos(data.photos)
-      }
-    } catch (err) {
-      console.error('Failed to process menu items:', err)
-      setMenuItems([])
-      setMenuPhotos([])
-    }
-  }
+  const handleMenuAnalyzed = useCallback((data: {
+    items: MenuItem[];
+    photos: string[];
+    restaurantName: string;
+  }) => {
+    setMenuItems(data.items);
+    setMenuPhotos(data.photos);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
