@@ -1,11 +1,9 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { motion } from 'framer-motion'
-import { Upload, Link, CheckCircle, Loader2 } from 'lucide-react'
+import { Upload, CheckCircle, Loader2 } from 'lucide-react'
 
 interface MenuItem {
   japanese: string;
