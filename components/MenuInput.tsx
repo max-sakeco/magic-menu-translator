@@ -28,30 +28,7 @@ export default function MenuInput({ onMenuAnalyzed }: MenuInputProps) {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      const droppedFile = e.dataTransfer.files[0];
-      if (droppedFile && droppedFile.type.startsWith('image/')) {
-        setFile(droppedFile);
-        analyzeMenu(droppedFile);
-      }
-    },
-    [onMenuAnalyzed]
-  );
-
-  const handleFileSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const selectedFile = e.target.files?.[0];
-      if (selectedFile) {
-        setFile(selectedFile);
-        analyzeMenu(selectedFile);
-      }
-    },
-    [onMenuAnalyzed]
-  );
-
-  const analyzeMenu = async (imageFile: File) => {
+  const analyzeMenu = useCallback(async (imageFile: File) => {
     setIsLoading(true);
     setError(null);
 
@@ -80,7 +57,30 @@ export default function MenuInput({ onMenuAnalyzed }: MenuInputProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [onMenuAnalyzed]);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const droppedFile = e.dataTransfer.files[0];
+      if (droppedFile && droppedFile.type.startsWith('image/')) {
+        setFile(droppedFile);
+        analyzeMenu(droppedFile);
+      }
+    },
+    [analyzeMenu]
+  );
+
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFile = e.target.files?.[0];
+      if (selectedFile) {
+        setFile(selectedFile);
+        analyzeMenu(selectedFile);
+      }
+    },
+    [analyzeMenu]
+  );
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();

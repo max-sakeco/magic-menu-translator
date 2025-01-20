@@ -85,6 +85,7 @@ async function findPlaceId(restaurantName: string): Promise<string | null> {
 // export const revalidate = 0
 
 interface PlaceDetails {
+  status?: 'OK' | 'INVALID_REQUEST' | 'NOT_FOUND';
   result: {
     photos?: Array<{
       photo_reference: string;
@@ -210,17 +211,17 @@ export async function GET(req: NextRequest) {
 
     // Log detailed photo information
     const photos = detailsData.result.photos;
-    console.log('Photos metadata:', photos.map((p: any) => ({
-      photo_reference: p.photo_reference,
-      height: p.height,
-      width: p.width,
-      html_attributions: p.html_attributions
+    console.log('Photos metadata:', photos.map((photo) => ({
+      photo_reference: photo.photo_reference,
+      height: photo.height,
+      width: photo.width,
+      html_attributions: photo.html_attributions
     })));
 
     const photoUrls = await Promise.all(
       photos
         .slice(0, 10)
-        .map(async (photo: any) => {
+        .map(async (photo) => {
           // Get photo with maximum resolution
           const photoResponse = await fetch(
             `https://maps.googleapis.com/maps/api/place/photo?` +
