@@ -1,18 +1,24 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
+// Configure longer timeout
+export const maxDuration = 60; // Set maximum duration to 60 seconds
+export const dynamic = 'force-dynamic'; // Disable static optimization
+
 if (!process.env.OPENAI_API_KEY) {
   throw new Error('OPENAI_API_KEY is not configured in environment variables')
 }
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
+  timeout: 30000, // 30 seconds timeout for API requests
 })
 
 console.log('API Key exists:', !!process.env.OPENAI_API_KEY)
 
 interface OpenAIError {
   message: string;
+  status?: number;
 }
 
 export async function POST(request: Request) {
@@ -74,7 +80,7 @@ export async function POST(request: Request) {
           throw new Error('No content in response')
         }
         
-        console.log('Raw response:', content)
+        console.log('5. OpenAI response received')
         const parsedData = JSON.parse(content)
         return NextResponse.json(parsedData)
       } catch (parseError) {
@@ -89,6 +95,16 @@ export async function POST(request: Request) {
       const openaiError = error as OpenAIError
       console.error('OpenAI API Error:', openaiError)
       console.error('Full error object:', JSON.stringify(error, null, 2))
+      
+      // Check for timeout
+      if (openaiError.status === 504 || 
+          (typeof openaiError.message === 'string' && openaiError.message.includes('timeout'))) {
+        return NextResponse.json(
+          { error: 'Request timed out. Please try again.' },
+          { status: 504 }
+        )
+      }
+      
       return NextResponse.json(
         { error: 'OpenAI API error', details: openaiError.message },
         { status: 500 }
