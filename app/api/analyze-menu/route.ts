@@ -50,7 +50,10 @@ export async function POST(request: Request) {
           {
             role: "user",
             content: [
-              { type: "text", text: "Analyze this Japanese menu image and return ONLY a JSON object in this exact format, with no additional text or markdown: { \"items\": [ { \"japanese\": \"item in japanese\", \"english\": \"translation\" } ] }" },
+              { 
+                type: "text", 
+                text: "Analyze this Japanese menu image and return ONLY a JSON object in this exact format: { \"items\": [ { \"japanese\": \"item in japanese\", \"english\": \"translation\", \"price\": number, \"category\": \"meat|fish|vegetarian|vegan\", \"cookingMethod\": \"fried|stir-fried|boiled|grilled|raw|other\", \"nutrition\": { \"protein\": \"high|medium|low\", \"carbs\": \"high|medium|low\", \"salt\": \"high|medium|low\", \"sugar\": \"high|medium|low\" } } ] }"
+              },
               {
                 type: "image_url",
                 image_url: {
