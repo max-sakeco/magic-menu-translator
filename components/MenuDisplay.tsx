@@ -4,8 +4,9 @@ import { useState, useMemo } from 'react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
+import { X } from 'lucide-react'
 
 interface MenuItem {
   japanese: string;
@@ -28,6 +29,7 @@ interface MenuDisplayProps {
 
 export default function MenuDisplay({ items, photos = [] }: MenuDisplayProps) {
   const [viewMode, setViewMode] = useState<'traditional' | 'ingredient'>('traditional')
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
   // Group items by category
   const categorizedItems = useMemo(() => {
@@ -105,7 +107,11 @@ export default function MenuDisplay({ items, photos = [] }: MenuDisplayProps) {
           {photos.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               {photos.map((photo, index) => (
-                <div key={index} className="relative aspect-[4/3] rounded-lg overflow-hidden">
+                <div 
+                  key={index} 
+                  className="relative aspect-[4/3] rounded-lg overflow-hidden cursor-pointer"
+                  onClick={() => setSelectedImage(photo)}
+                >
                   <Image
                     src={photo}
                     alt={`Menu photo ${index + 1}`}
@@ -157,7 +163,36 @@ export default function MenuDisplay({ items, photos = [] }: MenuDisplayProps) {
           )}
         </CardContent>
       </Card>
+
+      <AnimatePresence>
+        {selectedImage && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-[90vw] max-h-[90vh] bg-black rounded-lg overflow-hidden"
+            >
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="absolute top-4 right-4 z-10 p-2 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-75 transition-colors"
+              >
+                <X size={24} />
+              </button>
+              <div className="relative w-full h-[90vh]">
+                <Image
+                  src={selectedImage}
+                  alt="Full size menu photo"
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
-  )
+  );
 }
 
