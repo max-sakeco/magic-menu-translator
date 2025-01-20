@@ -84,6 +84,18 @@ async function findPlaceId(restaurantName: string): Promise<string | null> {
 // export const dynamic = 'force-dynamic'
 // export const revalidate = 0
 
+interface PlaceDetails {
+  result: {
+    photos?: Array<{
+      photo_reference: string;
+      height: number;
+      width: number;
+      html_attributions: string[];
+    }>;
+    name?: string;
+  };
+}
+
 // Export the GET function directly
 export async function GET(req: NextRequest) {
   try {
@@ -179,7 +191,7 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const detailsData = await detailsResponse.json()
+    const detailsData: PlaceDetails = await detailsResponse.json()
     console.log('Place details:', detailsData)
 
     if (detailsData.status === 'INVALID_REQUEST' || detailsData.status === 'NOT_FOUND') {
@@ -189,7 +201,7 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    if (!detailsData.result?.photos) {
+    if (!detailsData.result?.photos || detailsData.result.photos.length === 0) {
       return NextResponse.json(
         { error: 'No photos found' },
         { status: 404 }

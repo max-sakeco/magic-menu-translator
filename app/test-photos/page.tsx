@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import Image from 'next/image'
 
 interface PhotoData {
   url: string
@@ -86,32 +87,17 @@ export default function TestPhotos() {
       {photos.length > 0 && (
         <div className="space-y-6">
           <h2 className="text-2xl font-semibold">{restaurantName}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {photos.map((photo, index) => (
-              <Card key={index} className="overflow-hidden">
-                <div className="relative aspect-[4/3]">
-                  <img
-                    src={photo.url}
-                    alt={`Photo ${index + 1}`}
-                    className="object-cover w-full h-full"
-                  />
-                </div>
-                <CardContent className="p-4">
-                  <p className="text-sm text-gray-600">
-                    Dimensions: {photo.width}x{photo.height}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Aspect Ratio: {(photo.width / photo.height).toFixed(2)}
-                  </p>
-                  {photo.html_attributions.map((attribution, i) => (
-                    <div 
-                      key={i} 
-                      className="text-xs text-gray-500 mt-1"
-                      dangerouslySetInnerHTML={{ __html: attribution }}
-                    />
-                  ))}
-                </CardContent>
-              </Card>
+              <div key={index} className="relative aspect-[4/3] rounded-lg overflow-hidden">
+                <Image
+                  src={photo.url}
+                  alt={`Restaurant photo ${index + 1}`}
+                  fill
+                  className="object-cover hover:scale-105 transition-transform duration-300"
+                  unoptimized
+                />
+              </div>
             ))}
           </div>
         </div>

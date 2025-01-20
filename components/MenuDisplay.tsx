@@ -5,6 +5,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 
 interface MenuItem {
   japanese: string;
@@ -105,10 +106,12 @@ export default function MenuDisplay({ items, photos = [] }: MenuDisplayProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               {photos.map((photo, index) => (
                 <div key={index} className="relative aspect-[4/3] rounded-lg overflow-hidden">
-                  <img
+                  <Image
                     src={photo}
                     alt={`Menu photo ${index + 1}`}
-                    className="object-cover w-full h-full hover:scale-105 transition-transform duration-300"
+                    fill
+                    className="object-cover hover:scale-105 transition-transform duration-300"
+                    unoptimized
                   />
                 </div>
               ))}

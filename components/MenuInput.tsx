@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { motion } from 'framer-motion'
-import { Upload, Link } from 'lucide-react'
+import { Upload, Link, CheckCircle, Loader2 } from 'lucide-react'
 
 interface MenuItem {
   japanese: string;
@@ -23,240 +23,68 @@ interface MenuInputProps {
 }
 
 export default function MenuInput({ onMenuAnalyzed }: MenuInputProps) {
-  const [input, setInput] = useState('')
-  const [file, setFile] = useState<File | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [url, setUrl] = useState('')
-  const [isLoadingPhotos, setIsLoadingPhotos] = useState(false)
+  const [file, setFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value)
-    setFile(null) // Clear file if URL is being entered
-  }
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const droppedFile = e.dataTransfer.files[0];
+      if (droppedFile && droppedFile.type.startsWith('image/')) {
+        setFile(droppedFile);
+        analyzeMenu(droppedFile);
+      }
+    },
+    [onMenuAnalyzed]
+  );
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (files && files.length > 0) {
-      setFile(files[0])
-      setInput(files[0].name) // Display filename in input
-    }
-  }
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFile = e.target.files?.[0];
+      if (selectedFile) {
+        setFile(selectedFile);
+        analyzeMenu(selectedFile);
+      }
+    },
+    [onMenuAnalyzed]
+  );
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError(null)
+  const analyzeMenu = async (imageFile: File) => {
+    setIsLoading(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append('image', imageFile);
 
     try {
-      if (file) {
-        // Handle file upload
-        const formData = new FormData()
-        formData.append('image', file)
+      const response = await fetch('/api/analyze-menu', {
+        method: 'POST',
+        body: formData,
+      });
 
-        const response = await fetch('/api/analyze-menu', {
-          method: 'POST',
-          body: formData,
-        })
-
-        const data = await response.json()
-        console.log('API Response:', data)
-
-        if (!response.ok) {
-          throw new Error(data.details || data.error || 'Failed to analyze menu')
-        }
-
-        onMenuAnalyzed({
-          items: data.items || [],
-          photos: [URL.createObjectURL(file)],
-          restaurantName: ''
-        })
-      } else if (url.trim()) {
-        // Handle Google Maps URL
-        const response = await fetch(`/api/fetch-menu-photos?url=${encodeURIComponent(url)}`)
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || 'Failed to fetch menu photos')
-        }
-        
-        const data = await response.json()
-        console.log('Received photos data:', data)
-
-        if (!data.photos || data.photos.length === 0) {
-          throw new Error('No menu photos found for this restaurant')
-        }
-
-        // Process each photo through the menu analyzer
-        const menuResults = await Promise.all(
-          data.photos.map(async (photoUrl: string) => {
-            try {
-              // Fetch the image
-              const imageResponse = await fetch(photoUrl)
-              const blob = await imageResponse.blob()
-
-              // Convert to proper image format
-              const img = new Image()
-              img.src = URL.createObjectURL(blob)
-              await new Promise((resolve) => (img.onload = resolve))
-
-              const canvas = document.createElement('canvas')
-              canvas.width = img.width
-              canvas.height = img.height
-              const ctx = canvas.getContext('2d')
-              ctx?.drawImage(img, 0, 0)
-
-              // Convert to JPEG format
-              const jpegBlob = await new Promise<Blob>((resolve) => {
-                canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.95)
-              })
-
-              const file = new File([jpegBlob], 'menu.jpg', { type: 'image/jpeg' })
-              const formData = new FormData()
-              formData.append('image', file)
-
-              const analysisResponse = await fetch('/api/analyze-menu', {
-                method: 'POST',
-                body: formData,
-              })
-
-              if (!analysisResponse.ok) {
-                throw new Error('Failed to analyze menu photo')
-              }
-
-              return await analysisResponse.json()
-            } catch (err) {
-              console.error('Error processing photo:', err)
-              return { items: [] }
-            }
-          })
-        )
-
-        // Combine all menu items from different photos
-        const combinedMenuItems = menuResults.reduce((acc, result) => {
-          if (result.items && Array.isArray(result.items)) {
-            return [...acc, ...result.items]
-          }
-          return acc
-        }, [])
-
-        onMenuAnalyzed({
-          items: combinedMenuItems,
-          photos: data.photos,
-          restaurantName: data.restaurantName
-        })
-      } else {
-        throw new Error('Please either upload a photo or enter a Google Maps URL')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
-      console.error('Error details:', err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    const files = e.dataTransfer.files
-    if (files && files.length > 0) {
-      setFile(files[0])
-      setInput(files[0].name)
-    }
-  }
-
-  const handleUrlSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoadingPhotos(true)
-    setError(null)
-
-    try {
-      if (!url.trim()) {
-        throw new Error('Please enter a Google Maps URL')
-      }
-
-      const response = await fetch(`/api/fetch-menu-photos?url=${encodeURIComponent(url)}`)
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch menu photos')
-      }
-      
-      const data = await response.json()
-      console.log('Received photos data:', data) // Debug log
-
-      if (!data.photos || data.photos.length === 0) {
-        throw new Error('No menu photos found for this restaurant')
+        throw new Error(`Error: ${response.status}`);
       }
 
-      // Process each photo through the menu analyzer
-      const menuResults = await Promise.all(
-        data.photos.map(async (photoUrl: string) => {
-          try {
-            // Fetch the image
-            const imageResponse = await fetch(photoUrl)
-            const blob = await imageResponse.blob()
-
-            // Convert to proper image format
-            const img = new Image()
-            img.src = URL.createObjectURL(blob)
-            await new Promise((resolve) => (img.onload = resolve))
-
-            const canvas = document.createElement('canvas')
-            canvas.width = img.width
-            canvas.height = img.height
-            const ctx = canvas.getContext('2d')
-            ctx?.drawImage(img, 0, 0)
-
-            // Convert to JPEG format
-            const jpegBlob = await new Promise<Blob>((resolve) => {
-              canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.95)
-            })
-
-            const file = new File([jpegBlob], 'menu.jpg', { type: 'image/jpeg' })
-            const formData = new FormData()
-            formData.append('image', file)
-
-            const analysisResponse = await fetch('/api/analyze-menu', {
-              method: 'POST',
-              body: formData,
-            })
-
-            if (!analysisResponse.ok) {
-              throw new Error('Failed to analyze menu photo')
-            }
-
-            return await analysisResponse.json()
-          } catch (err) {
-            console.error('Error processing photo:', err)
-            return { items: [] } // Return empty items for failed photos
-          }
-        })
-      )
-
-      // Combine all menu items from different photos
-      const combinedMenuItems = menuResults.reduce((acc, result) => {
-        if (result.items && Array.isArray(result.items)) {
-          return [...acc, ...result.items]
-        }
-        return acc
-      }, [])
-
-      // Pass both menu items and photos to parent
-      onMenuAnalyzed({ 
-        items: combinedMenuItems,
-        photos: data.photos, // Include the photos from the API response
-        restaurantName: data.restaurantName
-      })
+      const data = await response.json();
+      onMenuAnalyzed({
+        items: data.items || [],
+        photos: [URL.createObjectURL(imageFile)],
+        restaurantName: ''
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch menu photos')
+      setError(err instanceof Error ? err.message : 'Failed to analyze menu');
+      console.error('Error analyzing menu:', err);
     } finally {
-      setIsLoadingPhotos(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
 
   return (
     <motion.div
@@ -264,63 +92,59 @@ export default function MenuInput({ onMenuAnalyzed }: MenuInputProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <Card className="bg-white dark:bg-gray-800 shadow-lg">
+      <Card className="w-full max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle className="text-2xl font-semibold text-gray-800 dark:text-gray-100">Add the url of the restaurant or upload a photo</CardTitle>
+          <CardTitle className="text-2xl font-semibold text-center">
+            Upload Menu Photo
+          </CardTitle>
+          <CardDescription className="text-center">
+            Drag and drop a menu photo or click to select
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div 
-              className="relative"
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-            >
-              <Input
-                type="text"
-                placeholder="Paste Google Maps URL or click icon to upload menu photo"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="w-full pr-20"
-              />
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                className="hidden"
-                accept="image/*"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {file ? <Upload className="w-4 h-4" /> : <Link className="w-4 h-4" />}
-              </Button>
-            </div>
-            <Button 
-              type="submit" 
-              size="sm" 
-              className="mt-2"
-              disabled={isLoading || (!url.trim() && !file)}
-            >
-              {isLoading ? 'Processing...' : 'Create my Magic Menu'}
-            </Button>
-          </form>
+          <div
+            className={`
+              border-2 border-dashed rounded-lg p-8 text-center
+              ${file ? 'border-green-500' : 'border-gray-300'}
+              hover:border-gray-400 transition-colors duration-200
+              cursor-pointer
+            `}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {isLoading ? (
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                <p className="text-sm text-gray-500">Analyzing menu...</p>
+              </div>
+            ) : file ? (
+              <div className="flex flex-col items-center gap-2">
+                <CheckCircle className="h-8 w-8 text-green-500" />
+                <p className="text-sm text-gray-500">{file.name}</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <Upload className="h-8 w-8 text-gray-400" />
+                <p className="text-sm text-gray-500">
+                  Click or drag and drop to upload
+                </p>
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*"
+              onChange={handleFileSelect}
+            />
+          </div>
           {error && (
-            <p className="mt-2 text-sm text-red-500">
-              {error}
-            </p>
-          )}
-          {file && (
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Selected file: {file.name}
-            </p>
+            <p className="mt-4 text-sm text-red-500 text-center">{error}</p>
           )}
         </CardContent>
       </Card>
     </motion.div>
-  )
+  );
 }
 
