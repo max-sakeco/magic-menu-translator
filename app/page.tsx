@@ -20,12 +20,6 @@ interface MenuItem {
   };
 }
 
-interface MenuData {
-  items: MenuItem[]
-  photos?: string[]
-  restaurantName?: string
-}
-
 export default function Home() {
   const [activeTab, setActiveTab] = useState('menu')
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
